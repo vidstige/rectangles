@@ -1,8 +1,9 @@
 class Image(object):
-    def __init__(self, width, height, data):
+    def __init__(self, width, height, data=None):
         self.width = width
         self.height = height
-        self.data = data
+        self.stride = width * 3
+        self.data = data or [0] * self.stride * self.height
 
 
 class NetPBMException(Exception):
