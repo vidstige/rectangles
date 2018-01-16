@@ -1,6 +1,7 @@
 import sys
 from netpbm import imread, Image
-
+import numpy as np
+from scipy.optimize import minimize
 
 class Rectangle(object):
     def __init__(self, x, y, w, h, color):
@@ -14,13 +15,14 @@ class Rectangle(object):
 
 def render_rectangle(rectangle: Rectangle, target: Image):
     data = target.data
-    for y in range(rectangle.y, rectangle.y + rectangle.h):
-        for x in range(rectangle.x, rectangle.x + rectangle.w):
-            r, g, b = rectangle.color
+    r, g, b = rectangle.color
+    for y in range(int(rectangle.y), int(rectangle.y + rectangle.h)):
+        for x in range(int(rectangle.x), int(rectangle.x + rectangle.w)):
             o = target.stride * y + x
-            data[o + 0] = r
-            data[o + 1] = g
-            data[o + 2] = b
+            if o >= 0 and o < len(data):
+                data[o + 0] = int(r)
+                data[o + 1] = int(g)
+                data[o + 2] = int(b)
 
 
 def render(shapes, target: Image):
@@ -32,6 +34,10 @@ def chunks(l, n):
     """Yield successive n-sized chunks from l."""
     for i in range(0, len(l), n):
         yield l[i:i + n]
+
+def everything(image: Image) -> np.array:
+    """returns all color data as numpy array"""
+    return np.frombuffer(image, dtype=np.dtype('b'))
 
 
 class Problem(object):
@@ -54,24 +60,26 @@ class Problem(object):
             yield Rectangle(x, y, w, h, color)
 
 
-    def error(self, y):
+    def error(self, x):
         """Returns error vector"""
+        print(x)
         tmp = Image(self.image.width, self.image.height)
-        render(y, tmp)
-        return 0
+        render(self.unpack(x), tmp)
+        e = everything(self.image.data) - everything(tmp.data)
+        print(np.linalg.norm(e))
+        return np.linalg.norm(e)
 
 
 def main():
     img = imread(sys.stdin.buffer)
 
-    white = (0xff, 0xff, 0xff)
-    r0 = [Rectangle(0, 0, img.width, img.height, white)]
     problem = Problem(img)
-    x = list(problem.pack(r0))
-    y = list(problem.unpack(x))
-    print(r0)
-    print(y)
-    print(problem.error(r0))
-
+    white = (0xff, 0xff, 0xff)
+    gray = (0x90, 0x90, 0x90)
+    r0 = [Rectangle(2, 2, img.width-4, img.height-4, gray)]
+    x0 = list(problem.pack(r0))
+    res = minimize(problem.error, x0, method='CG',
+        options=dict(disp=True))
+    print(res)
 
 main()

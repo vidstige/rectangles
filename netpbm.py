@@ -3,7 +3,7 @@ class Image(object):
         self.width = width
         self.height = height
         self.stride = width * 3
-        self.data = data or [0] * self.stride * self.height
+        self.data = data or bytearray([0] * self.stride * self.height)
 
 
 class NetPBMException(Exception):
