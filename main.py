@@ -12,13 +12,12 @@ class Rectangle(object):
         return "Rectangle({x}, {y}, {w}, {h}, <color>)".format(
             x=self.x, y=self.y, w=self.w, h=self.h)
 
-
 def render_rectangle(rectangle: Rectangle, target: Image):
     data = target.data
     r, g, b = rectangle.color
     for y in range(int(rectangle.y), int(rectangle.y + rectangle.h)):
         for x in range(int(rectangle.x), int(rectangle.x + rectangle.w)):
-            o = target.stride * y + x
+            o = target.stride * y + x * 3
             if o >= 0 and o < len(data):
                 data[o + 0] = int(r)
                 data[o + 1] = int(g)
@@ -82,4 +81,5 @@ def main():
         options=dict(disp=True))
     print(res)
 
-main()
+if __name__ == "__main__":
+    main()
