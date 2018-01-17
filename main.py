@@ -1,5 +1,6 @@
 import sys
 from netpbm import imread, Image
+import math
 import numpy as np
 from scipy.optimize import minimize
 
@@ -15,13 +16,19 @@ class Rectangle(object):
 def render_rectangle(rectangle: Rectangle, target: Image):
     data = target.data
     r, g, b = rectangle.color
-    for y in range(int(rectangle.y), int(rectangle.y + rectangle.h)):
-        for x in range(int(rectangle.x), int(rectangle.x + rectangle.w)):
+    for y in range(int(rectangle.y), math.ceil(rectangle.y + rectangle.h)):
+        for x in range(int(rectangle.x), math.ceil(rectangle.x + rectangle.w)):
+            xa = rectangle.x - x
+            xa = xa if xa > 0 else 1
+
+            if x >= int(rectangle.x + rectangle.w):
+                xa = (rectangle.x + rectangle.w) - x
+
             o = target.stride * y + x * 3
             if o >= 0 and o < len(data):
-                data[o + 0] = int(r)
-                data[o + 1] = int(g)
-                data[o + 2] = int(b)
+                data[o + 0] = int(r) * xa
+                data[o + 1] = int(g) * xa
+                data[o + 2] = int(b) * xa
 
 
 def render(shapes, target: Image):
@@ -64,7 +71,7 @@ class Problem(object):
         print(x)
         tmp = Image(self.image.width, self.image.height)
         render(self.unpack(x), tmp)
-        e = everything(self.image.data) - everything(tmp.data)
+        e = everything(self.image.data) - np.array(tmp.data)
         print(np.linalg.norm(e))
         return np.linalg.norm(e)
 
