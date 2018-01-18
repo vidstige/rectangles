@@ -68,10 +68,10 @@ class Problem(object):
 
     def error(self, x):
         """Returns error vector"""
-        print(x)
+        #print(x)
         tmp = Image(self.image.width, self.image.height)
         render(self.unpack(x), tmp)
-        e = everything(self.image.data) - np.array(tmp.data)
+        e = (everything(self.image.data)/255.0) - (np.array(tmp.data) / 255.0)
         print(np.linalg.norm(e))
         return np.linalg.norm(e)
 
@@ -81,7 +81,7 @@ def main():
 
     problem = Problem(img)
     white = (0xff, 0xff, 0xff)
-    gray = (0x90, 0x90, 0x90)
+    gray = (0x80, 0x80, 0x80)
     r0 = [Rectangle(2, 2, img.width-4, img.height-4, gray)]
     x0 = list(problem.pack(r0))
     res = minimize(problem.error, x0, method='CG',
