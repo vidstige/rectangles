@@ -1,8 +1,9 @@
 import sys
-from netpbm import imread, Image
 import math
 import numpy as np
+from scipy.ndimage import imread
 from scipy.optimize import minimize
+
 
 class Rectangle(object):
     def __init__(self, x, y, w, h, color):
@@ -13,9 +14,9 @@ class Rectangle(object):
         return "Rectangle({x}, {y}, {w}, {h}, <color>)".format(
             x=self.x, y=self.y, w=self.w, h=self.h)
 
-def render_rectangle(rectangle: Rectangle, target: Image):
-    data = target.data
+def render_rectangle(rectangle: Rectangle, target: np.array):
     r, g, b = rectangle.color
+    outside = 0
     for y in range(int(rectangle.y), math.ceil(rectangle.y + rectangle.h)):
         for x in range(int(rectangle.x), math.ceil(rectangle.x + rectangle.w)):
             xa = rectangle.x - x
@@ -24,14 +25,15 @@ def render_rectangle(rectangle: Rectangle, target: Image):
             if x >= int(rectangle.x + rectangle.w):
                 xa = (rectangle.x + rectangle.w) - x
 
-            o = target.stride * y + x * 3
-            if o >= 0 and o < len(data):
-                data[o + 0] = int(r) * xa
-                data[o + 1] = int(g) * xa
-                data[o + 2] = int(b) * xa
+            if x >= 0 and x < target.shape[0]:
+                target[x, y, 0] = r * xa
+                target[x, y, 1] = g * xa
+                target[x, y, 2] = b * xa
+            else:
+                outside += 1
+    return outside
 
-
-def render(shapes, target: Image):
+def render(shapes, target: np.array):
     for shape in shapes:
         render_rectangle(shape, target)
 
@@ -41,13 +43,9 @@ def chunks(l, n):
     for i in range(0, len(l), n):
         yield l[i:i + n]
 
-def everything(image: Image) -> np.array:
-    """returns all color data as numpy array"""
-    return np.frombuffer(image, dtype=np.dtype('b'))
-
 
 class Problem(object):
-    def __init__(self, image: Image) -> None:
+    def __init__(self, image: np.array) -> None:
         self.image = image
 
     def pack(self, y):
@@ -68,21 +66,19 @@ class Problem(object):
 
     def error(self, x):
         """Returns error vector"""
-        #print(x)
-        tmp = Image(self.image.width, self.image.height)
+        tmp = np.zeros(self.image.shape)
         render(self.unpack(x), tmp)
-        e = (everything(self.image.data)/255.0) - (np.array(tmp.data) / 255.0)
-        print(np.linalg.norm(e))
+        e = np.divide(self.image, 255.0) - np.divide(tmp.data, 255.0)
+        #print(np.linalg.norm(e))
         return np.linalg.norm(e)
 
 
 def main():
     img = imread(sys.stdin.buffer)
-
+    print(img.shape)
     problem = Problem(img)
-    white = (0xff, 0xff, 0xff)
     gray = (0x80, 0x80, 0x80)
-    r0 = [Rectangle(2, 2, img.width-4, img.height-4, gray)]
+    r0 = [Rectangle(2, 2, 28, 28, gray)]
     x0 = list(problem.pack(r0))
     res = minimize(problem.error, x0, method='CG',
         options=dict(disp=True))

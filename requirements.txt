@@ -1,4 +1,6 @@
 scipy
+pillow
 
 # dev
 nose
+pylint
